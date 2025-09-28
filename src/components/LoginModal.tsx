@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  updateProfile,
 } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,12 +30,45 @@ const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
     try {
+      let userCredential;
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        // 🔹 Sign in
+        userCredential = await signInWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
+        );
       } else {
-        await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        // 🔹 Sign up
+        userCredential = await createUserWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
+        );
+        // Save displayName in Firebase auth profile
+        await updateProfile(userCredential.user, {
+          displayName: formData.name,
+        });
       }
+
+      const { user } = userCredential;
+
+      // 🔹 Build profile object (localStorage)
+      const profile = {
+        id: user.uid,
+        name: user.displayName || formData.name || "",
+        email: user.email || formData.email,
+        bio: "",
+        skills: [] as string[],
+        interests: [] as string[],
+        avatar: user.photoURL || "",
+      };
+
+      localStorage.setItem("user", JSON.stringify(profile));
+
+      // Redirect to home
       window.location.href = "/home";
     } catch (err: any) {
       setError(err.message);
@@ -45,7 +79,20 @@ const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
 
   const handleGoogleLogin = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      const profile = {
+        id: user.uid,
+        name: user.displayName || "",
+        email: user.email || "",
+        bio: "",
+        skills: [] as string[],
+        interests: [] as string[],
+        avatar: user.photoURL || "",
+      };
+
+      localStorage.setItem("user", JSON.stringify(profile));
       window.location.href = "/home";
     } catch (err: any) {
       setError(err.message);
@@ -63,7 +110,12 @@ const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-md" onClick={onClose} />
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-background/80 backdrop-blur-md"
+        onClick={onClose}
+      />
+      {/* Modal */}
       <div className="relative glass-effect p-8 rounded-2xl max-w-md w-full mx-4 bounce-in">
         <button
           onClick={onClose}
@@ -164,7 +216,9 @@ const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
             onClick={() => setIsLogin(!isLogin)}
             className="text-primary hover:text-primary-glow transition-colors"
           >
-            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+            {isLogin
+              ? "Don't have an account? Sign up"
+              : "Already have an account? Sign in"}
           </button>
         </div>
       </div>
