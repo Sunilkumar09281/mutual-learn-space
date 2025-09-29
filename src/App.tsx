@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import HomePage from "./components/HomePage";
 import NotFound from "./pages/NotFound";
+import MyLearning from "./components/MyLearning";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/home" element={<HomePage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
+          <Route path="/my-learning" element={<MyLearning />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

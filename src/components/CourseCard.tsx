@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Star, Clock, TrendingUp, ArrowLeftRight } from 'lucide-react';
 
@@ -21,6 +21,14 @@ interface CourseCardProps {
 
 const CourseCard = ({ course }: CourseCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isSelected, setIsSelected] = useState(false);
+
+  useEffect(() => {
+    const learning = JSON.parse(localStorage.getItem('myLearning') || '[]');
+    if (learning.find((c: Course) => c.id === course.id)) {
+      setIsSelected(true);
+    }
+  }, [course.id]);
 
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -35,6 +43,16 @@ const CourseCard = ({ course }: CourseCardProps) => {
     }
   };
 
+  const handleStartExchange = () => {
+    const learning = JSON.parse(localStorage.getItem('myLearning') || '[]');
+    if (!learning.find((c: Course) => c.id === course.id)) {
+      learning.push(course);
+      localStorage.setItem('myLearning', JSON.stringify(learning));
+      alert('Have a good journey!');
+      setIsSelected(true);
+    }
+  };
+
   return (
     <div
       className="course-card p-6 rounded-xl relative group"
@@ -45,7 +63,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-xl">
-            {course.avatar}
+            {course.avatar || course.teacher.charAt(0).toUpperCase()}
           </div>
           <div>
             <h3 className="font-semibold text-foreground line-clamp-1">{course.title}</h3>
@@ -78,7 +96,6 @@ const CourseCard = ({ course }: CourseCardProps) => {
         <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
           {course.description}
         </p>
-        
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
             <div className="flex items-center space-x-1">
@@ -128,8 +145,12 @@ const CourseCard = ({ course }: CourseCardProps) => {
           </div>
 
           <div className="pt-4">
-            <Button className="w-full hero-button">
-              Start Exchange
+            <Button
+              className="w-full hero-button"
+              onClick={handleStartExchange}
+              disabled={isSelected} // 🔹 disable if already selected
+            >
+              {isSelected ? 'Already Started' : 'Start Exchange'}
             </Button>
           </div>
         </div>

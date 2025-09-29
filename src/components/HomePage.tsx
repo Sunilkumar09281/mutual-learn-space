@@ -6,6 +6,8 @@ import CourseCard from "./CourseCard";
 import UserProfile from "./UserProfile";
 import { db } from "@/firebase";
 import { serverTimestamp } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+
 import {
   collection,
   addDoc,
@@ -39,6 +41,8 @@ const HomePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [courses, setCourses] = useState<Course[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const navigate = useNavigate();
+
   const [newCourse, setNewCourse] = useState({
     title: "",
     wantedSkill: "",
@@ -136,34 +140,42 @@ const HomePage = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search courses, skills..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64 bg-surface border-border"
-              />
-            </div>
-
-<Button
-  onClick={() => setShowProfile(true)}
-  className="flex items-center space-x-3 bg-surface hover:bg-surface-elevated border border-border p-2 rounded-full"
-  variant="outline"
->
-  {user?.avatar ? (
-    <img
-      src={user.avatar}       // profile image
-      alt="Profile"
-      className="h-12 w-12 rounded-full object-cover" // 🔹 increased size
+  <div className="relative hidden md:block">
+    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <Input
+      placeholder="Search courses, skills..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="pl-10 w-64 bg-surface border-border"
     />
-  ) : (
-    <User className="h-12 w-12" /> // 🔹 bigger fallback icon
-  )}
-  <span className="hidden sm:inline text-lg font-medium">{user?.name || "Complete Profile"}</span>
-</Button>
+  </div>
 
-          </div>
+  {/* My Learning Button */}
+  <Button
+    onClick={() => navigate("/my-learning")}
+    className="bg-primary text-white border-none"
+  >
+    My Learning
+  </Button>
+
+  <Button
+    onClick={() => setShowProfile(true)}
+    className="flex items-center space-x-2 bg-surface hover:bg-surface-elevated border border-border p-1 rounded-full"
+    variant="outline"
+  >
+    {user?.avatar ? (
+      <img
+        src={user.avatar}
+        alt="Profile"
+        className="h-12 w-12 rounded-full object-cover"
+      />
+    ) : (
+      <User className="h-12 w-12" />
+    )}
+    <span className="hidden sm:inline text-lg font-medium">{user?.name || "Complete Profile"}</span>
+  </Button>
+</div>
+
         </div>
       </header>
 
