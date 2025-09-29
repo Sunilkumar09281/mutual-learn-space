@@ -146,16 +146,23 @@ const HomePage = () => {
               />
             </div>
 
-            <Button
-              onClick={() => setShowProfile(true)}
-              className="flex items-center space-x-2 bg-surface hover:bg-surface-elevated border border-border"
-              variant="outline"
-            >
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">
-                {user?.name || "Complete Profile"}
-              </span>
-            </Button>
+<Button
+  onClick={() => setShowProfile(true)}
+  className="flex items-center space-x-3 bg-surface hover:bg-surface-elevated border border-border p-2 rounded-full"
+  variant="outline"
+>
+  {user?.avatar ? (
+    <img
+      src={user.avatar}       // profile image
+      alt="Profile"
+      className="h-12 w-12 rounded-full object-cover" // 🔹 increased size
+    />
+  ) : (
+    <User className="h-12 w-12" /> // 🔹 bigger fallback icon
+  )}
+  <span className="hidden sm:inline text-lg font-medium">{user?.name || "Complete Profile"}</span>
+</Button>
+
           </div>
         </div>
       </header>
