@@ -135,7 +135,7 @@ const HomePage = () => {
           <div className="flex items-center space-x-2">
             <BookOpen className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold text-foreground">
-              KnowledgeX
+              SkillConnect
             </span>
           </div>
 
@@ -308,7 +308,7 @@ const HomePage = () => {
       </Dialog>
 
       {/* User Profile Modal */}
-     <UserProfile
+      <UserProfile
   isOpen={showProfile}
   onClose={() => setShowProfile(false)}
   user={user}
