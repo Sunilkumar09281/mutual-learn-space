@@ -9,7 +9,8 @@ import CourseCard from "./CourseCard";
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase";
-
+import { getDoc } from "firebase/firestore";
+import { updateEmail } from "firebase/auth";
 interface User {
   id?: string;
   name?: string;
@@ -74,13 +75,28 @@ const UserProfile = ({
   const initialSnapshot = useRef<string>(JSON.stringify(defaultFormData));
 
   // Track Firebase Auth state
-  useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
+useEffect(() => {
+  const auth = getAuth();
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    setAuthUser(user);
+
+    if (user && !formData.name) {
+      const userRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userRef);
+
+      if (snap.exists()) {
+        const userData = snap.data() as User;
+        setFormData(userData);
+        initialSnapshot.current = JSON.stringify(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+        onUserUpdate(userData);
+      }
+    }
+  });
+  return () => unsubscribe();
+  // 👇 only run when component mounts, not when formData changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   // Load user into form
   useEffect(() => {
@@ -114,43 +130,47 @@ const UserProfile = ({
     onClose();
   };
 
-  const handleSave = async () => {
-    setError(null);
 
-    if (!formData.name?.trim()) {
-      setError("Name is required");
-      return;
+const handleSave = async () => {
+  setError(null);
+
+  if (!formData.name?.trim()) {
+    setError("Name is required");
+    return;
+  }
+  if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
+    setError("Enter a valid email");
+    return;
+  }
+
+  if (!authUser) {
+    setError("You must be logged in to save your profile.");
+    return;
+  }
+
+  try {
+    // Update Firebase Auth email (important!)
+    if (authUser.email !== formData.email) {
+      await updateEmail(authUser, formData.email);
     }
-    if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
-      setError("Enter a valid email");
-      return;
-    }
 
-    if (!authUser) {
-      setError("You must be logged in to save your profile.");
-      return;
-    }
+    // Save profile to Firestore
+    const updatedUser: User = { ...formData, id: authUser.uid };
+    const userRef = doc(db, "users", authUser.uid);
+    await setDoc(userRef, updatedUser, { merge: true });
 
-    try {
-      const updatedUser: User = { ...formData, id: authUser.uid };
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    onUserUpdate(updatedUser);
 
-      // Save to Firestore
-      const userRef = doc(db, "users", authUser.uid);
-      await setDoc(userRef, updatedUser, { merge: true });
-
-      // Save locally
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-
-      onUserUpdate(updatedUser);
-      setIsEditing(false);
-      initialSnapshot.current = JSON.stringify(formData);
-      setSavedMsg("Profile saved successfully");
-      setTimeout(() => setSavedMsg(""), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to save profile. Please try again.");
-    }
-  };
+    setIsEditing(false);
+    initialSnapshot.current = JSON.stringify(formData);
+    setSavedMsg("Profile saved successfully");
+    setTimeout(() => setSavedMsg(""), 3000);
+  } catch (err: any) {
+    console.error(err);
+    setError(err.message || "Failed to save profile. Please try again.");
+  }
+};
 
   const handleCancel = () => {
     if (user) {
