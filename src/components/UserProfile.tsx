@@ -5,12 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Edit3, Save, Plus, Trash2 } from "lucide-react";
 import Cropper from "react-easy-crop";
-import CourseCard from "./CourseCard";
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 import { getDoc } from "firebase/firestore";
 import { updateEmail } from "firebase/auth";
+
 interface User {
   id?: string;
   name?: string;
@@ -31,6 +31,7 @@ interface Course {
   rating: number;
   teacher: string;
   createdBy: string;
+  createdById?: string;
 }
 
 const defaultFormData: User = {
@@ -49,6 +50,46 @@ interface UserProfileProps {
   onUserUpdate: (user: User) => void;
   addedCourses?: Course[];
 }
+
+// Course Card with Delete on Hover
+const CourseCardWithDelete = ({ course, onDelete }: { course: Course; onDelete: (id: string) => void }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div
+      className="relative bg-gradient-to-br from-surface to-surface-elevated rounded-xl p-4 border border-border hover:border-primary/50 transition-all duration-300"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <h4 className="font-semibold text-foreground mb-2 line-clamp-1">{course.title}</h4>
+      <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{course.description}</p>
+      
+      {course.wantedSkill && (
+        <div className="bg-accent/10 rounded px-2 py-1 inline-block">
+          <p className="text-xs text-accent">Need: {course.wantedSkill}</p>
+        </div>
+      )}
+
+      {/* Delete Button on Hover */}
+      {isHovered && (
+        <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center animate-in fade-in duration-200">
+          <Button
+            onClick={() => {
+              if (confirm("Are you sure you want to delete this course?")) {
+                onDelete(course.id);
+              }
+            }}
+            className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
+            size="sm"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Course
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const UserProfile = ({
   isOpen,
@@ -75,33 +116,33 @@ const UserProfile = ({
   const initialSnapshot = useRef<string>(JSON.stringify(defaultFormData));
 
   // Track Firebase Auth state
-useEffect(() => {
-  const auth = getAuth();
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
-    setAuthUser(user);
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setAuthUser(user);
 
-    if (user && !formData.name) {
-      const userRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userRef);
+      if (user && !formData.name) {
+        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userRef);
 
-      if (snap.exists()) {
-        const userData = snap.data() as User;
-        setFormData(userData);
-        initialSnapshot.current = JSON.stringify(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
-        onUserUpdate(userData);
+        if (snap.exists()) {
+          const userData = snap.data() as User;
+          userData.id = snap.id;
+          setFormData(userData);
+          initialSnapshot.current = JSON.stringify(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+          onUserUpdate(userData);
+        }
       }
-    }
-  });
-  return () => unsubscribe();
-  // 👇 only run when component mounts, not when formData changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Load user into form
   useEffect(() => {
     if (user) {
       const snapshot: User = {
+        id: user.id || authUser?.uid,
         name: user.name || "",
         email: user.email || "",
         bio: user.bio || "",
@@ -115,7 +156,7 @@ useEffect(() => {
       setFormData(defaultFormData);
       initialSnapshot.current = JSON.stringify(defaultFormData);
     }
-  }, [user]);
+  }, [user, authUser]);
 
   const isDirty = useMemo(
     () => JSON.stringify(formData) !== initialSnapshot.current,
@@ -130,47 +171,46 @@ useEffect(() => {
     onClose();
   };
 
+  const handleSave = async () => {
+    setError(null);
 
-const handleSave = async () => {
-  setError(null);
-
-  if (!formData.name?.trim()) {
-    setError("Name is required");
-    return;
-  }
-  if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
-    setError("Enter a valid email");
-    return;
-  }
-
-  if (!authUser) {
-    setError("You must be logged in to save your profile.");
-    return;
-  }
-
-  try {
-    // Update Firebase Auth email (important!)
-    if (authUser.email !== formData.email) {
-      await updateEmail(authUser, formData.email);
+    if (!formData.name?.trim()) {
+      setError("Name is required");
+      return;
+    }
+    if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
+      setError("Enter a valid email");
+      return;
     }
 
-    // Save profile to Firestore
-    const updatedUser: User = { ...formData, id: authUser.uid };
-    const userRef = doc(db, "users", authUser.uid);
-    await setDoc(userRef, updatedUser, { merge: true });
+    if (!authUser) {
+      setError("You must be logged in to save your profile.");
+      return;
+    }
 
-    localStorage.setItem("user", JSON.stringify(updatedUser));
-    onUserUpdate(updatedUser);
+    try {
+      // Update Firebase Auth email (important!)
+      if (authUser.email !== formData.email) {
+        await updateEmail(authUser, formData.email);
+      }
 
-    setIsEditing(false);
-    initialSnapshot.current = JSON.stringify(formData);
-    setSavedMsg("Profile saved successfully");
-    setTimeout(() => setSavedMsg(""), 3000);
-  } catch (err: any) {
-    console.error(err);
-    setError(err.message || "Failed to save profile. Please try again.");
-  }
-};
+      // Save profile to Firestore
+      const updatedUser: User = { ...formData, id: authUser.uid };
+      const userRef = doc(db, "users", authUser.uid);
+      await setDoc(userRef, updatedUser, { merge: true });
+
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      onUserUpdate(updatedUser);
+
+      setIsEditing(false);
+      initialSnapshot.current = JSON.stringify(formData);
+      setSavedMsg("Profile saved successfully");
+      setTimeout(() => setSavedMsg(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to save profile. Please try again.");
+    }
+  };
 
   const handleCancel = () => {
     if (user) {
@@ -278,6 +318,16 @@ const handleSave = async () => {
     const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
     setFormData((prev) => ({ ...prev, avatar: croppedImage }));
     setShowCropper(false);
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    try {
+      await deleteDoc(doc(db, "courses", courseId));
+      alert("Course deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting course:", err);
+      alert("Failed to delete course. Please try again.");
+    }
   };
 
   if (!isOpen || !user) return null;
@@ -499,15 +549,22 @@ const handleSave = async () => {
           {error && <p className="text-sm text-red-500">{error}</p>}
           {savedMsg && <p className="text-sm text-green-500">{savedMsg}</p>}
 
-          {/* Added Courses */}
+          {/* Added Courses with Delete on Hover */}
           {addedCourses.length > 0 && (
             <div className="mt-6">
               <h3 className="text-lg font-semibold text-foreground mb-3">
-                Added Courses
+                My Added Courses
               </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Hover over a course to delete it
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {addedCourses.map((course) => (
-                  <CourseCard key={course.id} course={course} />
+                  <CourseCardWithDelete
+                    key={course.id}
+                    course={course}
+                    onDelete={handleDeleteCourse}
+                  />
                 ))}
               </div>
             </div>

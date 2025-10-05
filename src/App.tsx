@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import HomePage from "./components/HomePage";
 import NotFound from "./pages/NotFound";
 import MyLearning from "./components/MyLearning";
+import RequestsPage from "./components/RequestsPage";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           <Route path="/my-learning" element={<MyLearning />} />
+          <Route path="/requests" element={<RequestsPage />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
