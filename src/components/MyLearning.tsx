@@ -137,7 +137,7 @@ const MyLearning = () => {
       <div className="min-h-screen bg-background">
         <header className="border-b border-border bg-surface/50 backdrop-blur-lg sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-6 py-4">
-            <Button onClick={() => navigate("/")} variant="ghost" size="sm">
+            <Button onClick={() => navigate("/home")} variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Home
             </Button>
@@ -161,7 +161,7 @@ const MyLearning = () => {
       <header className="border-b border-border bg-surface/50 backdrop-blur-lg sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button onClick={() => navigate("/")} variant="ghost" size="sm">
+            <Button onClick={() => navigate("/home")} variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
